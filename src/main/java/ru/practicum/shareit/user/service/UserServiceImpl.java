@@ -2,57 +2,64 @@ package ru.practicum.shareit.user.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import ru.practicum.shareit.exception.EmailConflictException;
 import ru.practicum.shareit.user.UserRepository;
+import ru.practicum.shareit.user.dto.UserCreateDto;
 import ru.practicum.shareit.user.dto.UserDto;
+import ru.practicum.shareit.user.dto.UserUpdateDto;
 import ru.practicum.shareit.user.mapper.UserMapper;
 import ru.practicum.shareit.user.model.User;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
+    private final UserMapper userMapper;
 
     @Override
-    public UserDto createUser(UserDto userDto) {
-        validateUserFields(userDto);
-
-        User user = UserMapper.toUser(userDto);
+    public UserDto createUser(UserCreateDto userCreateDto) {
+        User user = userMapper.toUserFromCreateDto(userCreateDto);
         User savedUser = userRepository.save(user);
-        return UserMapper.toUserDto(savedUser);
+        return userMapper.toUserDto(savedUser);
     }
 
     @Override
-    public UserDto updateUser(Long userId, UserDto userDto) {
+    public UserDto updateUser(Long userId, UserUpdateDto userUpdateDto) {
         User existingUser = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
 
-        if (userDto.getName() != null) {
-            existingUser.setName(userDto.getName());
-        }
-        if (userDto.getEmail() != null) {
-            validateEmail(userDto.getEmail());
-            existingUser.setEmail(userDto.getEmail());
-        }
+        Optional.ofNullable(userUpdateDto.getEmail())
+                .filter(email -> !email.isBlank())
+                .map(String::toLowerCase)
+                .filter(newEmail -> !newEmail.equals(existingUser.getEmail().toLowerCase()))
+                .ifPresent(newEmail -> {
+                    userRepository.findByEmail(newEmail)
+                            .ifPresent(user -> {
+                                throw new EmailConflictException("User with email " + newEmail + " already exists");
+                            });
+                });
+
+        userMapper.updateUserFromUpdateDto(userUpdateDto, existingUser);
 
         User updatedUser = userRepository.save(existingUser);
-        return UserMapper.toUserDto(updatedUser);
+        return userMapper.toUserDto(updatedUser);
     }
 
     @Override
     public UserDto getUserById(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
-        return UserMapper.toUserDto(user);
+        return userMapper.toUserDto(user);
     }
 
     @Override
     public List<UserDto> getAllUsers() {
         return userRepository.findAll().stream()
-                .map(UserMapper::toUserDto)
-                .collect(Collectors.toList());
+                .map(userMapper::toUserDto)
+                .toList();
     }
 
     @Override
@@ -61,21 +68,5 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("User not found with id: " + userId);
         }
         userRepository.deleteById(userId);
-    }
-
-    private void validateUserFields(UserDto userDto) {
-        if (userDto.getEmail() == null || userDto.getEmail().isBlank()) {
-            throw new IllegalArgumentException("Email is required");
-        }
-        if (userDto.getName() == null || userDto.getName().isBlank()) {
-            throw new IllegalArgumentException("Name is required");
-        }
-        validateEmail(userDto.getEmail());
-    }
-
-    private void validateEmail(String email) {
-        if (!email.contains("@") || email.indexOf("@") >= email.lastIndexOf(".") || email.length() <= 3) {
-            throw new IllegalArgumentException("Invalid email format");
-        }
     }
 }

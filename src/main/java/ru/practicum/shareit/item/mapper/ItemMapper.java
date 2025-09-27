@@ -1,25 +1,35 @@
 package ru.practicum.shareit.item.mapper;
 
+import org.mapstruct.BeanMapping;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
+import org.mapstruct.NullValuePropertyMappingStrategy;
+import ru.practicum.shareit.item.dto.ItemCreateDto;
 import ru.practicum.shareit.item.dto.ItemDto;
+import ru.practicum.shareit.item.dto.ItemUpdateDto;
 import ru.practicum.shareit.item.model.Item;
-import ru.practicum.shareit.user.model.User;
 
-public class ItemMapper {
+@Mapper(componentModel = "spring")
+public interface ItemMapper {
 
-    public static ItemDto toItemDto(Item item) {
-        if (item == null) {
-            return null;
-        }
-        Long ownerId = item.getOwner() != null ? item.getOwner().getId() : null;
-        return new ItemDto(item.getId(), item.getName(), item.getDescription(),
-                item.getAvailable(), ownerId, item.getRequestId());
-    }
+    @Mapping(target = "ownerId", source = "owner.id")
+    ItemDto toItemDto(Item item);
 
-    public static Item toItem(ItemDto itemDto, User owner) {
-        if (itemDto == null) {
-            return null;
-        }
-        return new Item(itemDto.getId(), itemDto.getName(), itemDto.getDescription(),
-                itemDto.getAvailable(), owner, itemDto.getRequestId());
-    }
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "name", source = "itemCreateDto.name")
+    @Mapping(target = "description", source = "itemCreateDto.description")
+    @Mapping(target = "available", source = "itemCreateDto.available")
+    @Mapping(target = "owner", source = "owner")
+    @Mapping(target = "requestId", source = "itemCreateDto.requestId")
+    Item toItemFromCreateDto(ItemCreateDto itemCreateDto, ru.practicum.shareit.user.model.User owner);
+
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "owner", ignore = true)
+    @Mapping(target = "requestId", ignore = true)
+    @Mapping(target = "name", source = "itemUpdateDto.name")
+    @Mapping(target = "description", source = "itemUpdateDto.description")
+    @Mapping(target = "available", source = "itemUpdateDto.available")
+    void updateItemFromUpdateDto(ItemUpdateDto itemUpdateDto, @MappingTarget Item item);
 }
