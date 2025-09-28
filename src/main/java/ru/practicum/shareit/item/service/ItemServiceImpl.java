@@ -12,8 +12,6 @@ import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.UserRepository;
 
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -24,22 +22,6 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public ItemDto createItem(ItemCreateDto itemCreateDto, Long ownerId) {
-        Stream.<Map.Entry<String, Object>>of(
-                        Map.entry("name", itemCreateDto.getName()),
-                        Map.entry("description", itemCreateDto.getDescription()),
-                        Map.entry("available", itemCreateDto.getAvailable())
-                )
-                .filter(entry -> {
-                    Object value = entry.getValue();
-                    if (value == null) return true;
-                    if (value instanceof String) return ((String) value).isBlank();
-                    return false;
-                })
-                .findFirst()
-                .ifPresent(entry -> {
-                    throw new IllegalArgumentException("Item " + entry.getKey() + " is required");
-                });
-
         User owner = userRepository.findById(ownerId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + ownerId));
 

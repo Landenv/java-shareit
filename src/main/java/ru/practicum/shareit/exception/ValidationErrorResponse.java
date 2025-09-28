@@ -1,16 +1,15 @@
 package ru.practicum.shareit.exception;
 
-import lombok.Data;
-import java.util.ArrayList;
 import java.util.List;
 
-@Data
 public class ValidationErrorResponse {
-    private List<Violation> violations = new ArrayList<>();
+    private final List<Violation> violations;
 
-    @Data
-    public static class Violation {
-        private final String fieldName;
-        private final String message;
+    public ValidationErrorResponse(List<Violation> violations) {
+        this.violations = violations;
+    }
+
+    public List<Violation> getViolations() {
+        return violations;
     }
 }

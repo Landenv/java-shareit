@@ -7,6 +7,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import jakarta.validation.ConstraintViolationException;
+
+import java.util.List;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -14,20 +16,20 @@ public class ErrorHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorResponse handleMethodArgumentNotValid(MethodArgumentNotValidException exception) {
-        String errorMessage = exception.getBindingResult().getFieldErrors().stream()
-                .map(error -> error.getField() + ": " + error.getDefaultMessage())
-                .collect(Collectors.joining("; "));
-        return new ErrorResponse(errorMessage);
+    public ValidationErrorResponse handleMethodArgumentNotValid(MethodArgumentNotValidException exception) {
+        List<Violation> violations = exception.getBindingResult().getFieldErrors().stream()
+                .map(error -> new Violation(error.getField(), error.getDefaultMessage()))
+                .collect(Collectors.toList());
+        return new ValidationErrorResponse(violations);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorResponse handleConstraintViolation(ConstraintViolationException exception) {
-        String errorMessage = exception.getConstraintViolations().stream()
-                .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
-                .collect(Collectors.joining("; "));
-        return new ErrorResponse(errorMessage);
+    public ValidationErrorResponse handleConstraintViolation(ConstraintViolationException exception) {
+        List<Violation> violations = exception.getConstraintViolations().stream()
+                .map(violation -> new Violation(violation.getPropertyPath().toString(), violation.getMessage()))
+                .collect(Collectors.toList());
+        return new ValidationErrorResponse(violations);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

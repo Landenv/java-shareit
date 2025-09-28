@@ -21,26 +21,29 @@ public class UserRepository {
     public User save(User user) {
         String email = user.getEmail().toLowerCase();
 
-        if (user.getId() == null) {
-            if (emails.contains(email)) {
-                throw new EmailConflictException("User with email " + user.getEmail() + " already exists");
-            }
-        } else {
+        // Проверяем на уникальность email для нового пользователя
+        if (user.getId() == null && emails.contains(email)) {
+            throw new EmailConflictException("User with email " + user.getEmail() + " already exists");
+        }
+
+        // Проверяем на уникальность email при обновлении пользователя
+        if (user.getId() != null) {
             User existingUser = users.get(user.getId());
             if (existingUser != null && !existingUser.getEmail().equalsIgnoreCase(user.getEmail())) {
                 if (emails.contains(email)) {
                     throw new EmailConflictException("User with email " + user.getEmail() + " already exists");
                 }
                 emails.remove(existingUser.getEmail().toLowerCase());
+                emails.add(email);
             }
         }
 
         if (user.getId() == null) {
             user.setId(idCounter++);
+            emails.add(email);
         }
 
         users.put(user.getId(), user);
-        emails.add(email);
         return user;
     }
 
