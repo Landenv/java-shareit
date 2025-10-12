@@ -39,7 +39,7 @@ public class ItemServiceImpl implements ItemService {
         User owner = findUserById(ownerId);
         Item item = itemMapper.toItemFromCreateDto(itemCreateDto, owner);
         Item savedItem = itemRepository.save(item);
-        return itemMapper.toItemDto(savedItem);
+        return enrichItemWithBookingsAndComments(savedItem, null, ownerId);
     }
 
     @Override
@@ -88,7 +88,7 @@ public class ItemServiceImpl implements ItemService {
         }
 
         return itemRepository.searchAvailableItems(text).stream()
-                .map(itemMapper::toItemDto)
+                .map(item -> enrichItemWithBookingsAndComments(item, null, null))
                 .collect(Collectors.toList());
     }
 
@@ -98,13 +98,31 @@ public class ItemServiceImpl implements ItemService {
         Item item = findItemById(itemId);
         User author = findUserById(authorId);
 
-        boolean hasBooked = bookingRepository
+        if (item.getOwner().getId().equals(authorId)) {
+            throw new ValidationException("Owner cannot comment on own item");
+        }
+
+        boolean hasCompletedBooking = bookingRepository
                 .findFirstByItemIdAndBookerIdAndEndBeforeAndStatus(
                         itemId, authorId, LocalDateTime.now(), BookingStatus.APPROVED)
                 .isPresent();
 
-        if (!hasBooked) {
-            throw new ValidationException("User can only comment on items they have booked in the past");
+        if (!hasCompletedBooking) {
+            boolean hasAnyApprovedBooking = bookingRepository
+                    .findByItemIdAndBookerIdAndStatus(itemId, authorId, BookingStatus.APPROVED)
+                    .stream()
+                    .findFirst()
+                    .isPresent();
+
+            if (hasAnyApprovedBooking) {
+                throw new ValidationException("User can only comment on items after the booking has ended");
+            } else {
+                throw new ValidationException("User can only comment on items they have booked");
+            }
+        }
+
+        if (commentCreateDto.getText() == null || commentCreateDto.getText().isBlank()) {
+            throw new ValidationException("Comment text cannot be empty");
         }
 
         Comment comment = new Comment();
@@ -120,7 +138,7 @@ public class ItemServiceImpl implements ItemService {
     private ItemDto enrichItemWithBookingsAndComments(Item item, Map<Long, List<Comment>> commentsByItemId, Long currentUserId) {
         ItemDto itemDto = itemMapper.toItemDto(item);
 
-        boolean isOwner = item.getOwner().getId().equals(currentUserId);
+        boolean isOwner = currentUserId != null && item.getOwner().getId().equals(currentUserId);
 
         if (isOwner) {
             LocalDateTime now = LocalDateTime.now();
@@ -128,12 +146,12 @@ public class ItemServiceImpl implements ItemService {
             List<Booking> nextBookings = bookingRepository.findNextBookingForItem(item.getId(), now);
 
             if (!lastBookings.isEmpty()) {
-                Booking lastBooking = lastBookings.getFirst();
+                Booking lastBooking = lastBookings.get(0);
                 itemDto.setLastBooking(new BookingInfo(lastBooking.getId(), lastBooking.getBooker().getId()));
             }
 
             if (!nextBookings.isEmpty()) {
-                Booking nextBooking = nextBookings.getFirst();
+                Booking nextBooking = nextBookings.get(0);
                 itemDto.setNextBooking(new BookingInfo(nextBooking.getId(), nextBooking.getBooker().getId()));
             }
         }

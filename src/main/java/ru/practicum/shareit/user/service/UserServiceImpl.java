@@ -13,7 +13,6 @@ import ru.practicum.shareit.user.mapper.UserMapper;
 import ru.practicum.shareit.user.model.User;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -39,16 +38,15 @@ public class UserServiceImpl implements UserService {
     public UserDto updateUser(Long userId, UserUpdateDto userUpdateDto) {
         User existingUser = findUserById(userId);
 
-        Optional.ofNullable(userUpdateDto.getEmail())
-                .filter(email -> !email.isBlank())
-                .map(String::toLowerCase)
-                .filter(newEmail -> !newEmail.equals(existingUser.getEmail().toLowerCase()))
-                .ifPresent(newEmail -> {
-                    userRepository.findByEmailAndIdNot(newEmail, userId)
-                            .ifPresent(user -> {
-                                throw new EmailConflictException("User with email " + newEmail + " already exists");
-                            });
-                });
+        // Проверка email только если он изменился и не пустой
+        if (userUpdateDto.getEmail() != null &&
+                !userUpdateDto.getEmail().isBlank() &&
+                !userUpdateDto.getEmail().equalsIgnoreCase(existingUser.getEmail())) {
+
+            if (userRepository.findByEmailAndIdNot(userUpdateDto.getEmail().toLowerCase(), userId).isPresent()) {
+                throw new EmailConflictException("User with email " + userUpdateDto.getEmail() + " already exists");
+            }
+        }
 
         userMapper.updateUserFromUpdateDto(userUpdateDto, existingUser);
         User updatedUser = userRepository.save(existingUser);

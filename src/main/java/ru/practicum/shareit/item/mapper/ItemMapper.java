@@ -22,6 +22,10 @@ public interface ItemMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "name", source = "itemCreateDto.name")
+    @Mapping(target = "description", source = "itemCreateDto.description")
+    @Mapping(target = "available", source = "itemCreateDto.available")
+    @Mapping(target = "owner", source = "owner")
+    @Mapping(target = "requestId", source = "itemCreateDto.requestId")
     Item toItemFromCreateDto(ItemCreateDto itemCreateDto, User owner);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)

@@ -53,6 +53,7 @@ public class ErrorHandler {
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ErrorResponse handleInternalError(Exception exception) {
+        exception.printStackTrace();
         return new ErrorResponse("Internal server error");
     }
 }
