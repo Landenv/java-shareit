@@ -7,11 +7,8 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ItemDto {
-    private Long id;
+public class ItemUpdateDto {
     private String name;
     private String description;
     private Boolean available;
-    private Long ownerId;
-    private Long requestId;
 }
