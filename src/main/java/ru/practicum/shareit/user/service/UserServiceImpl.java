@@ -2,7 +2,9 @@ package ru.practicum.shareit.user.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.exception.EmailConflictException;
+import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.user.UserRepository;
 import ru.practicum.shareit.user.dto.UserCreateDto;
 import ru.practicum.shareit.user.dto.UserDto;
@@ -15,43 +17,47 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
 
     @Override
+    @Transactional
     public UserDto createUser(UserCreateDto userCreateDto) {
+        if (userRepository.existsByEmail(userCreateDto.getEmail())) {
+            throw new EmailConflictException("User with email " + userCreateDto.getEmail() + " already exists");
+        }
+
         User user = userMapper.toUserFromCreateDto(userCreateDto);
         User savedUser = userRepository.save(user);
         return userMapper.toUserDto(savedUser);
     }
 
     @Override
+    @Transactional
     public UserDto updateUser(Long userId, UserUpdateDto userUpdateDto) {
-        User existingUser = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+        User existingUser = findUserById(userId);
 
         Optional.ofNullable(userUpdateDto.getEmail())
                 .filter(email -> !email.isBlank())
                 .map(String::toLowerCase)
                 .filter(newEmail -> !newEmail.equals(existingUser.getEmail().toLowerCase()))
                 .ifPresent(newEmail -> {
-                    userRepository.findByEmail(newEmail)
+                    userRepository.findByEmailAndIdNot(newEmail, userId)
                             .ifPresent(user -> {
                                 throw new EmailConflictException("User with email " + newEmail + " already exists");
                             });
                 });
 
         userMapper.updateUserFromUpdateDto(userUpdateDto, existingUser);
-
         User updatedUser = userRepository.save(existingUser);
         return userMapper.toUserDto(updatedUser);
     }
 
     @Override
     public UserDto getUserById(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+        User user = findUserById(userId);
         return userMapper.toUserDto(user);
     }
 
@@ -63,10 +69,16 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void deleteUser(Long userId) {
         if (!userRepository.existsById(userId)) {
-            throw new RuntimeException("User not found with id: " + userId);
+            throw new NotFoundException("User not found with id: " + userId);
         }
         userRepository.deleteById(userId);
+    }
+
+    private User findUserById(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User not found with id: " + userId));
     }
 }

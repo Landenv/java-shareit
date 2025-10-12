@@ -1,75 +1,18 @@
 package ru.practicum.shareit.user;
 
-import ru.practicum.shareit.exception.EmailConflictException;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import ru.practicum.shareit.user.model.User;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
-import org.springframework.stereotype.Repository;
+public interface UserRepository extends JpaRepository<User, Long> {
 
-@Repository
-public class UserRepository {
-    private final Map<Long, User> users = new HashMap<>();
-    private final Set<String> emails = new HashSet<>();
-    private long idCounter = 1;
+    Optional<User> findByEmail(String email);
 
-    public User save(User user) {
-        String email = user.getEmail().toLowerCase();
+    @Query("SELECT u FROM User u WHERE u.email = :email AND u.id <> :excludeId")
+    Optional<User> findByEmailAndIdNot(@Param("email") String email, @Param("excludeId") Long excludeId);
 
-        // Проверяем на уникальность email для нового пользователя
-        if (user.getId() == null && emails.contains(email)) {
-            throw new EmailConflictException("User with email " + user.getEmail() + " already exists");
-        }
-
-        // Проверяем на уникальность email при обновлении пользователя
-        if (user.getId() != null) {
-            User existingUser = users.get(user.getId());
-            if (existingUser != null && !existingUser.getEmail().equalsIgnoreCase(user.getEmail())) {
-                if (emails.contains(email)) {
-                    throw new EmailConflictException("User with email " + user.getEmail() + " already exists");
-                }
-                emails.remove(existingUser.getEmail().toLowerCase());
-                emails.add(email);
-            }
-        }
-
-        if (user.getId() == null) {
-            user.setId(idCounter++);
-            emails.add(email);
-        }
-
-        users.put(user.getId(), user);
-        return user;
-    }
-
-    public Optional<User> findById(Long id) {
-        return Optional.ofNullable(users.get(id));
-    }
-
-    public List<User> findAll() {
-        return List.copyOf(users.values());
-    }
-
-    public Optional<User> findByEmail(String email) {
-        return users.values().stream()
-                .filter(user -> user.getEmail().equalsIgnoreCase(email.trim()))
-                .findFirst();
-    }
-
-    public void deleteById(Long id) {
-        User user = users.get(id);
-        if (user != null) {
-            emails.remove(user.getEmail().toLowerCase());
-            users.remove(id);
-        }
-    }
-
-    public boolean existsById(Long id) {
-        return users.containsKey(id);
-    }
+    boolean existsByEmail(String email);
 }
