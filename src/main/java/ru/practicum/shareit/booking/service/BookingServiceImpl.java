@@ -19,7 +19,6 @@ import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.user.UserRepository;
 import ru.practicum.shareit.user.model.User;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -31,6 +30,7 @@ public class BookingServiceImpl implements BookingService {
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
     private final BookingMapper bookingMapper;
+    private final List<BookingStateStrategy> bookingStrategies;
 
     @Override
     @Transactional
@@ -94,33 +94,13 @@ public class BookingServiceImpl implements BookingService {
         getUserById(userId);
         Pageable pageable = PageRequest.of(from / size, size, Sort.by(Sort.Direction.DESC, "start"));
 
-        LocalDateTime now = LocalDateTime.now();
+        BookingStateStrategy strategy = bookingStrategies.stream()
+                .filter(s -> s.supports(state.toUpperCase()))
+                .findFirst()
+                .orElseThrow(() -> new ValidationException("Unknown state: " + state));
 
-        switch (state.toUpperCase()) {
-            case "ALL":
-                return bookingMapper.toBookingResponseDtoList(
-                        bookingRepository.findByBookerIdOrderByStartDesc(userId, pageable));
-            case "CURRENT":
-                return bookingMapper.toBookingResponseDtoList(
-                        bookingRepository.findByBookerIdAndStartBeforeAndEndAfterOrderByStartDesc(
-                                userId, now, now, pageable));
-            case "PAST":
-                return bookingMapper.toBookingResponseDtoList(
-                        bookingRepository.findByBookerIdAndEndBeforeOrderByStartDesc(userId, now, pageable));
-            case "FUTURE":
-                return bookingMapper.toBookingResponseDtoList(
-                        bookingRepository.findByBookerIdAndStartAfterOrderByStartDesc(userId, now, pageable));
-            case "WAITING":
-                return bookingMapper.toBookingResponseDtoList(
-                        bookingRepository.findByBookerIdAndStatusOrderByStartDesc(
-                                userId, BookingStatus.WAITING, pageable));
-            case "REJECTED":
-                return bookingMapper.toBookingResponseDtoList(
-                        bookingRepository.findByBookerIdAndStatusOrderByStartDesc(
-                                userId, BookingStatus.REJECTED, pageable));
-            default:
-                throw new ValidationException("Unknown state: " + state);
-        }
+        List<Booking> bookings = strategy.findUserBookings(userId, pageable);
+        return bookingMapper.toBookingResponseDtoList(bookings);
     }
 
     @Override
@@ -128,34 +108,15 @@ public class BookingServiceImpl implements BookingService {
         getUserById(ownerId);
         Pageable pageable = PageRequest.of(from / size, size, Sort.by(Sort.Direction.DESC, "start"));
 
-        LocalDateTime now = LocalDateTime.now();
+        BookingStateStrategy strategy = bookingStrategies.stream()
+                .filter(s -> s.supports(state.toUpperCase()))
+                .findFirst()
+                .orElseThrow(() -> new ValidationException("Unknown state: " + state));
 
-        switch (state.toUpperCase()) {
-            case "ALL":
-                return bookingMapper.toBookingResponseDtoList(
-                        bookingRepository.findByItemOwnerIdOrderByStartDesc(ownerId, pageable));
-            case "CURRENT":
-                return bookingMapper.toBookingResponseDtoList(
-                        bookingRepository.findByItemOwnerIdAndStartBeforeAndEndAfterOrderByStartDesc(
-                                ownerId, now, now, pageable));
-            case "PAST":
-                return bookingMapper.toBookingResponseDtoList(
-                        bookingRepository.findByItemOwnerIdAndEndBeforeOrderByStartDesc(ownerId, now, pageable));
-            case "FUTURE":
-                return bookingMapper.toBookingResponseDtoList(
-                        bookingRepository.findByItemOwnerIdAndStartAfterOrderByStartDesc(ownerId, now, pageable));
-            case "WAITING":
-                return bookingMapper.toBookingResponseDtoList(
-                        bookingRepository.findByItemOwnerIdAndStatusOrderByStartDesc(
-                                ownerId, BookingStatus.WAITING, pageable));
-            case "REJECTED":
-                return bookingMapper.toBookingResponseDtoList(
-                        bookingRepository.findByItemOwnerIdAndStatusOrderByStartDesc(
-                                ownerId, BookingStatus.REJECTED, pageable));
-            default:
-                throw new ValidationException("Unknown state: " + state);
-        }
+        List<Booking> bookings = strategy.findOwnerBookings(ownerId, pageable);
+        return bookingMapper.toBookingResponseDtoList(bookings);
     }
+
 
     private User getUserById(Long userId) {
         return userRepository.findById(userId)
