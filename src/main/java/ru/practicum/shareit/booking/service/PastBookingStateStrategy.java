@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import ru.practicum.shareit.booking.BookingRepository;
 import ru.practicum.shareit.booking.model.Booking;
+import ru.practicum.shareit.booking.model.BookingState;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,7 +28,7 @@ public class PastBookingStateStrategy implements BookingStateStrategy {
     }
 
     @Override
-    public boolean supports(String state) {
-        return "PAST".equalsIgnoreCase(state);
+    public boolean supports(BookingState state) {
+        return state == BookingState.PAST;
     }
 }

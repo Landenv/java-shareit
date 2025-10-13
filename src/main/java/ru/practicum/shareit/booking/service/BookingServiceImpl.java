@@ -18,6 +18,7 @@ import ru.practicum.shareit.item.ItemRepository;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.user.UserRepository;
 import ru.practicum.shareit.user.model.User;
+import ru.practicum.shareit.booking.model.BookingState;
 
 import java.util.List;
 
@@ -94,8 +95,15 @@ public class BookingServiceImpl implements BookingService {
         getUserById(userId);
         Pageable pageable = PageRequest.of(from / size, size, Sort.by(Sort.Direction.DESC, "start"));
 
+        BookingState bookingState;
+        try {
+            bookingState = BookingState.valueOf(state.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new ValidationException("Unknown state: " + state);
+        }
+
         BookingStateStrategy strategy = bookingStrategies.stream()
-                .filter(s -> s.supports(state.toUpperCase()))
+                .filter(s -> s.supports(bookingState))
                 .findFirst()
                 .orElseThrow(() -> new ValidationException("Unknown state: " + state));
 
@@ -108,8 +116,15 @@ public class BookingServiceImpl implements BookingService {
         getUserById(ownerId);
         Pageable pageable = PageRequest.of(from / size, size, Sort.by(Sort.Direction.DESC, "start"));
 
+        BookingState bookingState;
+        try {
+            bookingState = BookingState.valueOf(state.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new ValidationException("Unknown state: " + state);
+        }
+
         BookingStateStrategy strategy = bookingStrategies.stream()
-                .filter(s -> s.supports(state.toUpperCase()))
+                .filter(s -> s.supports(bookingState))
                 .findFirst()
                 .orElseThrow(() -> new ValidationException("Unknown state: " + state));
 
