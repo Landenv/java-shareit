@@ -15,13 +15,22 @@ import ru.practicum.shareit.user.model.User;
 public interface ItemMapper {
 
     @Mapping(target = "ownerId", source = "owner.id")
+    @Mapping(target = "lastBooking", ignore = true)
+    @Mapping(target = "nextBooking", ignore = true)
+    @Mapping(target = "comments", ignore = true)
     ItemDto toItemDto(Item item);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "name", source = "itemCreateDto.name")
+    @Mapping(target = "description", source = "itemCreateDto.description")
+    @Mapping(target = "available", source = "itemCreateDto.available")
+    @Mapping(target = "owner", source = "owner")
+    @Mapping(target = "requestId", source = "itemCreateDto.requestId")
     Item toItemFromCreateDto(ItemCreateDto itemCreateDto, User owner);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "owner", ignore = true)
+    @Mapping(target = "requestId", ignore = true)
     void updateItemFromUpdateDto(ItemUpdateDto itemUpdateDto, @MappingTarget Item item);
 }

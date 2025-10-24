@@ -32,9 +32,9 @@ public class ErrorHandler {
         return new ValidationErrorResponse(violations);
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
+    @ExceptionHandler({IllegalArgumentException.class, ValidationException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorResponse handleIllegalArgumentException(IllegalArgumentException exception) {
+    public ErrorResponse handleIllegalArgumentException(RuntimeException exception) {
         return new ErrorResponse(exception.getMessage());
     }
 
@@ -44,9 +44,9 @@ public class ErrorHandler {
         return new ErrorResponse(exception.getMessage());
     }
 
-    @ExceptionHandler(RuntimeException.class)
+    @ExceptionHandler(NotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public ErrorResponse handleNotFoundException(RuntimeException exception) {
+    public ErrorResponse handleNotFoundException(NotFoundException exception) {
         return new ErrorResponse(exception.getMessage());
     }
 
