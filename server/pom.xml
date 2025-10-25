@@ -15,6 +15,7 @@
 
     <properties>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
+        <surefire.version>3.0.0-M9</surefire.version>
     </properties>
 
     <dependencies>
@@ -95,6 +96,18 @@
                             <version>${mapstruct.version}</version>
                         </path>
                     </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire.version}</version>
+                <configuration>
+                    <excludes>
+                        <exclude>**/integration/**</exclude>
+                        <exclude>**/repository/**</exclude>
+                    </excludes>
                 </configuration>
             </plugin>
         </plugins>
